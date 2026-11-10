@@ -43,7 +43,7 @@
         // REGISTRO DO SERVICE WORKER COM ESTRATÉGIA CACHE-FIRST (OFFLINE PERMANENTE)
         if ('serviceWorker' in navigator) {
             const swCode = `
-                const CACHE_NAME = 'ear-trainer-v2';
+                const CACHE_NAME = 'ear-trainer-v3';
                 const ASSETS_TO_CACHE = [
                     './',
                     'index.html',
@@ -76,9 +76,7 @@
                 self.addEventListener('fetch', (e) => {
                     e.respondWith(
                         caches.match(e.request).then((cachedResponse) => {
-                            // Retorna do Cache local primeiro (mesmo sem servidor/offline)
                             if (cachedResponse) return cachedResponse;
-                            
                             return fetch(e.request).then((networkResponse) => {
                                 if (e.request.method === 'GET' && networkResponse.status === 200) {
                                     const responseClone = networkResponse.clone();
@@ -88,7 +86,6 @@
                                 }
                                 return networkResponse;
                             }).catch(() => {
-                                // Se falhar a rede e não achar a URL exata, retorna a raiz index.html do cache
                                 return caches.match('index.html') || caches.match('./');
                             });
                         })
@@ -100,9 +97,7 @@
             const swUrl = URL.createObjectURL(swBlob);
 
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register(swUrl)
-                    .then(reg => console.log('SW registrado com sucesso (Offline Habilitado)!'))
-                    .catch(err => console.log('Erro ao registrar SW:', err));
+                navigator.serviceWorker.register(swUrl).catch(err => console.log('SW registration error:', err));
             });
         }
     </script>
@@ -324,16 +319,21 @@
                         <select id="keySelect" class="form-select text-white">
                             <option value="RANDOM">🎲 Aleatório a cada ciclo</option>
                             <option value="C" selected>C (Dó Maior)</option>
-                            <option value="C#">C# / Db (Dó sustenido)</option>
+                            <option value="C#">C# (Dó sustenido)</option>
+                            <option value="Db">Db (Ré bemol)</option>
                             <option value="D">D (Ré Maior)</option>
-                            <option value="D#">D# / Eb (Ré sustenido)</option>
+                            <option value="D#">D# (Ré sustenido)</option>
+                            <option value="Eb">Eb (Mi bemol)</option>
                             <option value="E">E (Mi Maior)</option>
                             <option value="F">F (Fá Maior)</option>
-                            <option value="F#">F# / Gb (Fá sustenido)</option>
+                            <option value="F#">F# (Fá sustenido)</option>
+                            <option value="Gb">Gb (Sol bemol)</option>
                             <option value="G">G (Sol Maior)</option>
-                            <option value="G#">G# / Ab (Sol sustenido)</option>
+                            <option value="G#">G# (Sol sustenido)</option>
+                            <option value="Ab">Ab (Lá bemol)</option>
                             <option value="A">A (Lá Maior)</option>
-                            <option value="A#">A# / Bb (Lá sustenido)</option>
+                            <option value="A#">A# (Lá sustenido)</option>
+                            <option value="Bb">Bb (Si bemol)</option>
                             <option value="B">B (Si Maior)</option>
                         </select>
                     </div>
@@ -406,9 +406,13 @@
     <!-- Web Audio & Core Logic Script -->
     <script>
         const NOTE_NAMES_PT = {
-            "C": "Dó", "C#": "Dó sustenido", "D": "Ré", "D#": "Ré sustenido", 
-            "E": "Mi", "F": "Fá", "F#": "Fá sustenido", "G": "Sol", 
-            "G#": "Sol sustenido", "A": "Lá", "A#": "Lá sustenido", "B": "Si"
+            "C": "Dó", "C#": "Dó sustenido", "Db": "Ré bemol", "D": "Ré", 
+            "D#": "Ré sustenido", "Eb": "Mi bemol", "E": "Mi", "F": "Fá", 
+            "F#": "Fá sustenido", "Gb": "Sol bemol", "G": "Sol", 
+            "G#": "Sol sustenido", "Ab": "Lá bemol", "A": "Lá", 
+            "A#": "Lá sustenido", "Bb": "Si bemol", "B": "Si",
+            "E#": "Mi sustenido", "B#": "Si sustenido", "Cb": "Dó bemol",
+            "C##": "Dó duplo sustenido", "D##": "Ré duplo sustenido", "F##": "Fá duplo sustenido", "G##": "Sol duplo sustenido"
         };
 
         const DEGREE_NAMES_PT = [
@@ -416,7 +420,34 @@
             "Quinto grau", "Sexto grau", "Sétimo grau"
         ];
 
-        const NOTES_ORDER = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"];
+        const KEY_SEMITONES = {
+            "C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3, 
+            "E": 4, "F": 5, "F#": 6, "Gb": 6, "G": 7, "G#": 8, 
+            "Ab": 8, "A": 9, "A#": 10, "Bb": 10, "B": 11
+        };
+
+        const ALL_KEYS = ["C", "C#", "Db", "D", "D#", "Eb", "E", "F", "F#", "Gb", "G", "G#", "Ab", "A", "A#", "Bb", "B"];
+
+        const MAJOR_SCALES_NOTES = {
+            "C":  ["C", "D", "E", "F", "G", "A", "B"],
+            "C#": ["C#", "D#", "E#", "F#", "G#", "A#", "B#"],
+            "Db": ["Db", "Eb", "F", "Gb", "Ab", "Bb", "C"],
+            "D":  ["D", "E", "F#", "G", "A", "B", "C#"],
+            "D#": ["D#", "E#", "F##", "G#", "A#", "B##", "C##"],
+            "Eb": ["Eb", "F", "G", "Ab", "Bb", "C", "D"],
+            "E":  ["E", "F#", "G#", "A", "B", "C#", "D#"],
+            "F":  ["F", "G", "A", "Bb", "C", "D", "E"],
+            "F#": ["F#", "G#", "A#", "B", "C#", "D#", "E#"],
+            "Gb": ["Gb", "Ab", "Bb", "Cb", "Db", "Eb", "F"],
+            "G":  ["G", "A", "B", "C", "D", "E", "F#"],
+            "G#": ["G#", "A#", "B#", "C#", "D#", "E#", "F##"],
+            "Ab": ["Ab", "Bb", "C", "Db", "Eb", "F", "G"],
+            "A":  ["A", "B", "C#", "D", "E", "F#", "G#"],
+            "A#": ["A#", "B#", "C##", "D#", "E#", "F##", "G##"],
+            "Bb": ["Bb", "C", "D", "Eb", "F", "G", "A"],
+            "B":  ["B", "C#", "D#", "E", "F#", "G#", "A#"]
+        };
+
         const MAJOR_SCALE_INTERVALS = [0, 2, 4, 5, 7, 9, 11, 12];
 
         class AudioEngine {
@@ -429,8 +460,8 @@
 
             init() {
                 if (!this.ctx) {
-                    const AudioContext = window.AudioContext || window.webkitAudioContext;
-                    this.ctx = new AudioContext();
+                    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContextClass();
                     this.masterGain = this.ctx.createGain();
                     this.masterGain.gain.setValueAtTime(this.volume, this.ctx.currentTime);
                     this.masterGain.connect(this.ctx.destination);
@@ -438,6 +469,22 @@
                 if (this.ctx.state === 'suspended') {
                     this.ctx.resume();
                 }
+            }
+
+            unlock() {
+                this.init();
+                if (this.ctx && this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+                try {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    gain.gain.setValueAtTime(0.0001, this.ctx.currentTime);
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(0);
+                    osc.stop(this.ctx.currentTime + 0.05);
+                } catch(e) {}
             }
 
             setVolume(v) {
@@ -456,7 +503,7 @@
             }
 
             playNote(freq, duration = 1.0, startTime = 0, gainLevel = 1.0) {
-                if (!this.ctx) return;
+                this.unlock();
                 const now = this.ctx.currentTime + startTime;
 
                 const osc = this.ctx.createOscillator();
@@ -527,7 +574,10 @@
             }
 
             bindEvents() {
-                this.toggleBtn.addEventListener('click', () => this.toggleLoop());
+                this.toggleBtn.addEventListener('click', () => {
+                    this.audio.unlock();
+                    this.toggleLoop();
+                });
                 this.keySelect.addEventListener('change', (e) => {
                     this.selectedKey = e.target.value;
                 });
@@ -563,13 +613,17 @@
 
             speak(text) {
                 if ('speechSynthesis' in window && text) {
-                    window.speechSynthesis.cancel();
-                    const utterance = new SpeechSynthesisUtterance(text);
-                    if (this.speechVoice) utterance.voice = this.speechVoice;
-                    utterance.lang = 'pt-BR';
-                    utterance.rate = 1.0;
-                    utterance.volume = Math.min(1.0, this.audio.volume * 1.2);
-                    window.speechSynthesis.speak(utterance);
+                    try {
+                        window.speechSynthesis.cancel();
+                        const utterance = new SpeechSynthesisUtterance(text);
+                        if (this.speechVoice) utterance.voice = this.speechVoice;
+                        utterance.lang = 'pt-BR';
+                        utterance.rate = 1.0;
+                        utterance.volume = Math.min(1.0, this.audio.volume * 1.2);
+                        window.speechSynthesis.speak(utterance);
+                    } catch (e) {
+                        console.error('Erro na fala:', e);
+                    }
                 }
             }
 
@@ -584,7 +638,7 @@
             startLoop() {
                 if (this.isRunning) return;
 
-                this.audio.init();
+                this.audio.unlock();
                 this.isRunning = true;
                 this.toggleBtn.classList.remove('btn-glow');
                 this.toggleBtn.classList.add('btn-danger-glow');
@@ -629,9 +683,10 @@
                 // 1. Determinar Tom Atual
                 let rootKey = this.selectedKey;
                 if (rootKey === 'RANDOM') {
-                    rootKey = NOTES_ORDER[Math.floor(Math.random() * NOTES_ORDER.length)];
+                    rootKey = ALL_KEYS[Math.floor(Math.random() * ALL_KEYS.length)];
                 }
-                const rootIdx = NOTES_ORDER.indexOf(rootKey);
+                const rootIdx = KEY_SEMITONES[rootKey];
+                const scaleNotes = MAJOR_SCALES_NOTES[rootKey] || MAJOR_SCALES_NOTES["C"];
 
                 // 2. Tocar Cadência (I - IV - V - I)
                 this.statusBadge.className = 'badge bg-primary mb-2 px-3 py-2 text-uppercase';
@@ -640,7 +695,6 @@
                 this.statusSpinner.classList.remove('d-none');
                 this.noteResultBox.classList.add('d-none');
 
-                // Frequências dos acordes
                 const rootFreq = this.audio.getFreqFromAbsoluteSemitones(rootIdx);
                 const thirdFreq = this.audio.getFreqFromAbsoluteSemitones(rootIdx + 4);
                 const fifthFreq = this.audio.getFreqFromAbsoluteSemitones(rootIdx + 7);
@@ -673,8 +727,7 @@
                 const semitonesFromRoot = MAJOR_SCALE_INTERVALS[targetDegreeIndex];
                 
                 const targetAbsoluteSemitones = rootIdx + semitonesFromRoot;
-                const targetNoteIdx = (rootIdx + semitonesFromRoot) % 12;
-                const targetNoteName = NOTES_ORDER[targetNoteIdx];
+                const targetNoteName = scaleNotes[targetDegreeIndex];
                 const targetFreq = this.audio.getFreqFromAbsoluteSemitones(targetAbsoluteSemitones);
 
                 // 4. Toca Nota Alvo
@@ -726,7 +779,6 @@
                     `Escala subindo até a tônica aguda (${rootKey})...`;
 
                 if (degreeNumber <= 4) {
-                    // Graus 1 ao 4: toca descendo grau por grau da nota sorteada até o grau 1 (tônica grave)
                     for (let d = targetDegreeIndex; d >= 0; d--) {
                         if (!this.isRunning) return;
                         const noteSemitones = rootIdx + MAJOR_SCALE_INTERVALS[d];
@@ -735,7 +787,6 @@
                         await this.sleep(450);
                     }
                 } else {
-                    // Graus 5 ao 7: toca subindo grau por grau da nota sorteada até o grau 8 (tônica aguda, oitava superior)
                     for (let d = targetDegreeIndex; d <= 7; d++) {
                         if (!this.isRunning) return;
                         const noteSemitones = rootIdx + MAJOR_SCALE_INTERVALS[d];
