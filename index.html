@@ -43,7 +43,7 @@
         // REGISTRO DO SERVICE WORKER COM ESTRATÉGIA CACHE-FIRST (OFFLINE PERMANENTE)
         if ('serviceWorker' in navigator) {
             const swCode = `
-                const CACHE_NAME = 'ear-trainer-v3';
+                const CACHE_NAME = 'ear-trainer-v4';
                 const ASSETS_TO_CACHE = [
                     './',
                     'index.html',
@@ -258,6 +258,21 @@
             background: var(--accent-primary);
             box-shadow: 0 0 10px var(--accent-glow);
         }
+
+        .toggle-options-btn {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: #94a3b8;
+            font-size: 0.85rem;
+            border-radius: 0.75rem;
+            padding: 0.5rem 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .toggle-options-btn:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: #f8fafc;
+        }
     </style>
 </head>
 <body class="py-4 py-md-5">
@@ -274,8 +289,9 @@
                     <p class="text-muted small mb-0">Percepção Auditiva Relativa em Loop</p>
                 </div>
             </div>
-            <button id="installPWA" class="btn btn-outline-light btn-sm rounded-pill px-3 d-none">
-                <i class="fa-solid fa-download me-1"></i> Instalar App
+            <button id="toggleSettingsBtn" class="toggle-options-btn d-flex align-items-center gap-2">
+                <i class="fa-solid fa-sliders"></i>
+                <span id="toggleSettingsText">Ocultar Opções</span>
             </button>
         </div>
 
@@ -308,88 +324,104 @@
                 </div>
             </div>
 
-            <!-- Controls Panel -->
-            <div class="row g-3 mb-4">
-                <!-- Key Selector -->
-                <div class="col-12 col-md-6">
-                    <div class="setting-control">
-                        <label for="keySelect" class="form-label small text-muted mb-1 fw-semibold">
-                            <i class="fa-solid fa-key me-1 style-icon text-indigo"></i> Tonalidade (Key)
-                        </label>
-                        <select id="keySelect" class="form-select text-white">
-                            <option value="RANDOM">🎲 Aleatório a cada ciclo</option>
-                            <option value="C" selected>C (Dó Maior)</option>
-                            <option value="C#">C# (Dó sustenido)</option>
-                            <option value="Db">Db (Ré bemol)</option>
-                            <option value="D">D (Ré Maior)</option>
-                            <option value="D#">D# (Ré sustenido)</option>
-                            <option value="Eb">Eb (Mi bemol)</option>
-                            <option value="E">E (Mi Maior)</option>
-                            <option value="F">F (Fá Maior)</option>
-                            <option value="F#">F# (Fá sustenido)</option>
-                            <option value="Gb">Gb (Sol bemol)</option>
-                            <option value="G">G (Sol Maior)</option>
-                            <option value="G#">G# (Sol sustenido)</option>
-                            <option value="Ab">Ab (Lá bemol)</option>
-                            <option value="A">A (Lá Maior)</option>
-                            <option value="A#">A# (Lá sustenido)</option>
-                            <option value="Bb">Bb (Si bemol)</option>
-                            <option value="B">B (Si Maior)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Voice Announcement Selector -->
-                <div class="col-12 col-md-6">
-                    <div class="setting-control">
-                        <label for="voiceModeSelect" class="form-label small text-muted mb-1 fw-semibold">
-                            <i class="fa-solid fa-bullhorn me-1 text-indigo"></i> Falar na Revelação
-                        </label>
-                        <select id="voiceModeSelect" class="form-select text-white">
-                            <option value="note" selected>🎵 Nome da Nota (ex: Fá)</option>
-                            <option value="degree">🔢 Grau da Nota (ex: Quarto grau)</option>
-                            <option value="both">🗣️ Ambos (ex: Fá, Quarto grau)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Timbre Selector -->
-                <div class="col-12 col-md-6">
-                    <div class="setting-control">
-                        <label for="timbreSelect" class="form-label small text-muted mb-1 fw-semibold">
-                            <i class="fa-solid fa-music me-1 text-indigo"></i> Timbre do Sintetizador
-                        </label>
-                        <select id="timbreSelect" class="form-select text-white">
-                            <option value="piano">🎹 Piano Digital (Suave)</option>
-                            <option value="synth">🎛️ Synth Warm (Envolvente)</option>
-                            <option value="organ">🎹 Órgão / Flauta (Puro)</option>
-                        </select>
-                    </div>
-                </div>
-
-                <!-- Tempo de Resposta / Suspense -->
-                <div class="col-12 col-md-6">
-                    <div class="setting-control">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label for="delayInput" class="form-label small text-muted mb-0 fw-semibold">
-                                <i class="fa-solid fa-stopwatch me-1 text-indigo"></i> Tempo de Resposta
+            <!-- Controls Panel Collapsible -->
+            <div id="controlsPanel">
+                <div class="row g-3 mb-4">
+                    <!-- Key Selector -->
+                    <div class="col-12 col-md-6">
+                        <div class="setting-control">
+                            <label for="keySelect" class="form-label small text-muted mb-1 fw-semibold">
+                                <i class="fa-solid fa-key me-1 style-icon text-indigo"></i> Tonalidade (Key)
                             </label>
-                            <span id="delayValue" class="badge bg-indigo text-light small fw-bold px-2 py-1" style="background-color: var(--accent-primary);">3s</span>
+                            <select id="keySelect" class="form-select text-white">
+                                <option value="RANDOM">🎲 Aleatório a cada ciclo</option>
+                                <option value="C" selected>C (Dó Maior)</option>
+                                <option value="C#">C# (Dó sustenido)</option>
+                                <option value="Db">Db (Ré bemol)</option>
+                                <option value="D">D (Ré Maior)</option>
+                                <option value="D#">D# (Ré sustenido)</option>
+                                <option value="Eb">Eb (Mi bemol)</option>
+                                <option value="E">E (Mi Maior)</option>
+                                <option value="F">F (Fá Maior)</option>
+                                <option value="F#">F# (Fá sustenido)</option>
+                                <option value="Gb">Gb (Sol bemol)</option>
+                                <option value="G">G (Sol Maior)</option>
+                                <option value="G#">G# (Sol sustenido)</option>
+                                <option value="Ab">Ab (Lá bemol)</option>
+                                <option value="A">A (Lá Maior)</option>
+                                <option value="A#">A# (Lá sustenido)</option>
+                                <option value="Bb">Bb (Si bemol)</option>
+                                <option value="B">B (Si Maior)</option>
+                            </select>
                         </div>
-                        <input type="range" class="form-range mt-2" id="delayInput" min="1" max="10" step="1" value="3">
                     </div>
-                </div>
 
-                <!-- Volume Master -->
-                <div class="col-12 col-md-12">
-                    <div class="setting-control">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <label for="volumeInput" class="form-label small text-muted mb-0 fw-semibold">
-                                <i class="fa-solid fa-volume-high me-1 text-indigo"></i> Volume Geral
+                    <!-- Octave Range Selector -->
+                    <div class="col-12 col-md-6">
+                        <div class="setting-control">
+                            <label for="octaveRangeSelect" class="form-label small text-muted mb-1 fw-semibold">
+                                <i class="fa-solid fa-layer-group me-1 text-indigo"></i> Alcance de Oitavas
                             </label>
-                            <span id="volumeValue" class="badge bg-indigo text-light small fw-bold px-2 py-1" style="background-color: var(--accent-primary);">80%</span>
+                            <select id="octaveRangeSelect" class="form-select text-white">
+                                <option value="0" selected>🎼 Apenas 1 Oitava (Padrão)</option>
+                                <option value="1">↕️ Variar ±1 Oitava (Mais Amplo)</option>
+                                <option value="2">🌐 Variar ±2 Oitavas (Avançado)</option>
+                            </select>
                         </div>
-                        <input type="range" class="form-range mt-2" id="volumeInput" min="0" max="100" step="5" value="80">
+                    </div>
+
+                    <!-- Voice Announcement Selector -->
+                    <div class="col-12 col-md-6">
+                        <div class="setting-control">
+                            <label for="voiceModeSelect" class="form-label small text-muted mb-1 fw-semibold">
+                                <i class="fa-solid fa-bullhorn me-1 text-indigo"></i> Falar na Revelação
+                            </label>
+                            <select id="voiceModeSelect" class="form-select text-white">
+                                <option value="note" selected>🎵 Nome da Nota (ex: Fá)</option>
+                                <option value="degree">🔢 Grau da Nota (ex: Quarto grau)</option>
+                                <option value="both">🗣️ Ambos (ex: Fá, Quarto grau)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Timbre Selector -->
+                    <div class="col-12 col-md-6">
+                        <div class="setting-control">
+                            <label for="timbreSelect" class="form-label small text-muted mb-1 fw-semibold">
+                                <i class="fa-solid fa-music me-1 text-indigo"></i> Timbre do Sintetizador
+                            </label>
+                            <select id="timbreSelect" class="form-select text-white">
+                                <option value="piano">🎹 Piano Digital (Suave)</option>
+                                <option value="synth">🎛️ Synth Warm (Envolvente)</option>
+                                <option value="organ">🎹 Órgão / Flauta (Puro)</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Tempo de Resposta / Suspense -->
+                    <div class="col-12 col-md-6">
+                        <div class="setting-control">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="delayInput" class="form-label small text-muted mb-0 fw-semibold">
+                                    <i class="fa-solid fa-stopwatch me-1 text-indigo"></i> Tempo de Resposta
+                                </label>
+                                <span id="delayValue" class="badge bg-indigo text-light small fw-bold px-2 py-1" style="background-color: var(--accent-primary);">3s</span>
+                            </div>
+                            <input type="range" class="form-range mt-2" id="delayInput" min="1" max="10" step="1" value="3">
+                        </div>
+                    </div>
+
+                    <!-- Volume Master -->
+                    <div class="col-12 col-md-6">
+                        <div class="setting-control">
+                            <div class="d-flex justify-content-between align-items-center mb-1">
+                                <label for="volumeInput" class="form-label small text-muted mb-0 fw-semibold">
+                                    <i class="fa-solid fa-volume-high me-1 text-indigo"></i> Volume Geral
+                                </label>
+                                <span id="volumeValue" class="badge bg-indigo text-light small fw-bold px-2 py-1" style="background-color: var(--accent-primary);">80%</span>
+                            </div>
+                            <input type="range" class="form-range mt-2" id="volumeInput" min="0" max="100" step="5" value="80">
+                        </div>
                     </div>
                 </div>
             </div>
@@ -546,12 +578,14 @@
                 this.selectedKey = 'C';
                 this.voiceMode = 'note';
                 this.responseTime = 3;
+                this.octaveRange = 0;
 
                 this.speechVoice = null;
                 this.initSpeech();
 
                 this.toggleBtn = document.getElementById('toggleLoopBtn');
                 this.keySelect = document.getElementById('keySelect');
+                this.octaveRangeSelect = document.getElementById('octaveRangeSelect');
                 this.voiceModeSelect = document.getElementById('voiceModeSelect');
                 this.timbreSelect = document.getElementById('timbreSelect');
                 this.delayInput = document.getElementById('delayInput');
@@ -569,17 +603,35 @@
                 this.targetNoteDetail = document.getElementById('targetNoteDetail');
                 this.progressBar = document.getElementById('progressBar');
                 this.timerCountdown = document.getElementById('timerCountdown');
+                
+                this.toggleSettingsBtn = document.getElementById('toggleSettingsBtn');
+                this.toggleSettingsText = document.getElementById('toggleSettingsText');
+                this.controlsPanel = document.getElementById('controlsPanel');
 
                 this.bindEvents();
             }
 
             bindEvents() {
+                this.toggleSettingsBtn.addEventListener('click', () => {
+                    const isHidden = this.controlsPanel.classList.contains('d-none');
+                    if (isHidden) {
+                        this.controlsPanel.classList.remove('d-none');
+                        this.toggleSettingsText.textContent = 'Ocultar Opções';
+                    } else {
+                        this.controlsPanel.classList.add('d-none');
+                        this.toggleSettingsText.textContent = 'Mostrar Opções';
+                    }
+                });
+
                 this.toggleBtn.addEventListener('click', () => {
                     this.audio.unlock();
                     this.toggleLoop();
                 });
                 this.keySelect.addEventListener('change', (e) => {
                     this.selectedKey = e.target.value;
+                });
+                this.octaveRangeSelect.addEventListener('change', (e) => {
+                    this.octaveRange = parseInt(e.target.value, 10);
                 });
                 this.voiceModeSelect.addEventListener('change', (e) => {
                     this.voiceMode = e.target.value;
@@ -722,16 +774,28 @@
                 await this.sleep(1800);
                 if (!this.isRunning) return;
 
-                // 3. Sorteia nota alvo da escala maior (graus 1 a 7)
+                // 3. Sorteia nota alvo da escala maior (graus 1 a 7) e desvio de oitava
                 const targetDegreeIndex = Math.floor(Math.random() * 7);
                 const semitonesFromRoot = MAJOR_SCALE_INTERVALS[targetDegreeIndex];
                 
-                const targetAbsoluteSemitones = rootIdx + semitonesFromRoot;
+                // Variação de oitava baseada na escolha do usuário (-1, 0, +1, etc)
+                let octaveShift = 0;
+                if (this.octaveRange > 0) {
+                    const shifts = [];
+                    for (let o = -this.octaveRange; o <= this.octaveRange; o++) {
+                        shifts.push(o);
+                    }
+                    octaveShift = shifts[Math.floor(Math.random() * shifts.length)];
+                }
+
+                const targetAbsoluteSemitones = rootIdx + semitonesFromRoot + (octaveShift * 12);
                 const targetNoteName = scaleNotes[targetDegreeIndex];
                 const targetFreq = this.audio.getFreqFromAbsoluteSemitones(targetAbsoluteSemitones);
 
                 // 4. Toca Nota Alvo
-                this.statusText.textContent = 'Ouça a nota alvo... Tente identificar!';
+                this.statusText.textContent = octaveShift === 0 ? 
+                    'Ouça a nota alvo... Tente identificar!' :
+                    (octaveShift < 0 ? 'Ouça a nota alvo (Oitava Mais Grave)...' : 'Ouça a nota alvo (Oitava Mais Aguda)...');
                 this.statusSpinner.classList.add('d-none');
                 this.audio.playNote(targetFreq, 1.8, 0, 1.2);
                 await this.sleep(800);
@@ -750,13 +814,14 @@
                 const ptName = NOTE_NAMES_PT[targetNoteName] || targetNoteName;
                 const degreeNumber = targetDegreeIndex + 1;
                 const degreeSpeech = DEGREE_NAMES_PT[targetDegreeIndex];
+                const octaveTag = octaveShift !== 0 ? ` (${octaveShift > 0 ? '+' : ''}${octaveShift} 8va)` : '';
                 
                 this.statusBadge.className = 'badge bg-success mb-2 px-3 py-2 text-uppercase';
                 this.statusBadge.textContent = `Tom: ${rootKey} Maior`;
                 this.statusText.textContent = `Nota Revelada!`;
                 
                 this.targetNoteName.textContent = targetNoteName;
-                this.targetNoteDetail.textContent = `${ptName} (${degreeNumber}º Grau)`;
+                this.targetNoteDetail.textContent = `${ptName} (${degreeNumber}º Grau)${octaveTag}`;
                 this.noteResultBox.classList.remove('d-none');
 
                 let speechText = "";
@@ -773,7 +838,7 @@
                 await this.sleep(1200);
                 if (!this.isRunning) return;
 
-                // 6. Tocando Escala de Retorno baseada no grau e respeitando o tom selecionado
+                // 6. Tocando Escala de Retorno respeitando a oitava da nota sorteada
                 this.statusText.textContent = degreeNumber <= 4 ? 
                     `Escala descendo até a tônica (${rootKey})...` : 
                     `Escala subindo até a tônica aguda (${rootKey})...`;
@@ -781,7 +846,7 @@
                 if (degreeNumber <= 4) {
                     for (let d = targetDegreeIndex; d >= 0; d--) {
                         if (!this.isRunning) return;
-                        const noteSemitones = rootIdx + MAJOR_SCALE_INTERVALS[d];
+                        const noteSemitones = rootIdx + MAJOR_SCALE_INTERVALS[d] + (octaveShift * 12);
                         const freq = this.audio.getFreqFromAbsoluteSemitones(noteSemitones);
                         this.audio.playNote(freq, 0.5, 0, 0.9);
                         await this.sleep(450);
@@ -789,7 +854,7 @@
                 } else {
                     for (let d = targetDegreeIndex; d <= 7; d++) {
                         if (!this.isRunning) return;
-                        const noteSemitones = rootIdx + MAJOR_SCALE_INTERVALS[d];
+                        const noteSemitones = rootIdx + MAJOR_SCALE_INTERVALS[d] + (octaveShift * 12);
                         const freq = this.audio.getFreqFromAbsoluteSemitones(noteSemitones);
                         this.audio.playNote(freq, 0.5, 0, 0.9);
                         await this.sleep(450);
