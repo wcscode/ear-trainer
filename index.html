@@ -43,7 +43,7 @@
         // REGISTRO DO SERVICE WORKER COM ESTRATÉGIA CACHE-FIRST (OFFLINE PERMANENTE)
         if ('serviceWorker' in navigator) {
             const swCode = `
-                const CACHE_NAME = 'ear-trainer-v4';
+                const CACHE_NAME = 'ear-trainer-v6';
                 const ASSETS_TO_CACHE = [
                     './',
                     'index.html',
@@ -327,6 +327,19 @@
             <!-- Controls Panel Collapsible -->
             <div id="controlsPanel">
                 <div class="row g-3 mb-4">
+                    <!-- Training Mode Selector -->
+                    <div class="col-12">
+                        <div class="setting-control">
+                            <label for="modeSelect" class="form-label small text-muted mb-1 fw-semibold">
+                                <i class="fa-solid fa-graduation-cap me-1 text-indigo"></i> Modo de Treino
+                            </label>
+                            <select id="modeSelect" class="form-select text-white fw-bold">
+                                <option value="notes" selected>🎵 Notas Individuais (Graus da Escala)</option>
+                                <option value="cadences">🎹 Cadências Famosas (Progressões de Acordes)</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <!-- Key Selector -->
                     <div class="col-12 col-md-6">
                         <div class="setting-control">
@@ -452,6 +465,30 @@
             "Quinto grau", "Sexto grau", "Sétimo grau"
         ];
 
+        // 20 CADÊNCIAS FAMOSAS DE ACORDES
+        const FAMOUS_CADENCES = [
+            { name: "Cadência Autêntica Perfeita", spoken: "Um, cinco, um", roman: "I - V - I", degrees: [0, 7, 0], types: ["maj", "maj", "maj"] },
+            { name: "Cadência Plagal (Amém)", spoken: "Um, quatro, um", roman: "I - IV - I", degrees: [0, 5, 0], types: ["maj", "maj", "maj"] },
+            { name: "Cadência Completa Standard", spoken: "Um, quatro, cinco, um", roman: "I - IV - V - I", degrees: [0, 5, 7, 0], types: ["maj", "maj", "maj", "maj"] },
+            { name: "Pop de 4 Acordes", spoken: "Um, cinco, seis menor, quatro", roman: "I - V - vi - IV", degrees: [0, 7, 9, 5], types: ["maj", "maj", "min", "maj"] },
+            { name: "Pop Melancólico / Emotivo", spoken: "Seis menor, quatro, um, cinco", roman: "vi - IV - I - V", degrees: [9, 5, 0, 7], types: ["min", "maj", "maj", "maj"] },
+            { name: "Pop Alternativo", spoken: "Um, quatro, seis menor, cinco", roman: "I - IV - vi - V", degrees: [0, 5, 9, 7], types: ["maj", "maj", "min", "maj"] },
+            { name: "Jazz Standard / MPB", spoken: "Dois menor, cinco, um", roman: "ii - V - I", degrees: [2, 7, 0], types: ["min", "maj", "maj"] },
+            { name: "Jazz Turnaround completo", spoken: "Um, seis menor, dois menor, cinco", roman: "I - vi - ii - V", degrees: [0, 9, 2, 7], types: ["maj", "min", "min", "maj"] },
+            { name: "Anos 50 / Doo-Wop", spoken: "Um, seis menor, quatro, cinco", roman: "I - vi - IV - V", degrees: [0, 9, 5, 7], types: ["maj", "min", "maj", "maj"] },
+            { name: "Canon de Pachelbel", spoken: "Um, cinco, seis menor, três menor, quatro, um, quatro, cinco", roman: "I - V - vi - iii - IV - I - IV - V", degrees: [0, 7, 9, 4, 5, 0, 5, 7], types: ["maj", "maj", "min", "min", "maj", "maj", "maj", "maj"] },
+            { name: "Cadência Deceptiva (Enganosa)", spoken: "Um, cinco, seis menor", roman: "I - V - vi", degrees: [0, 7, 9], types: ["maj", "maj", "min"] },
+            { name: "Cadência Picarda / Dramática", spoken: "Um, seis menor, quatro, um", roman: "I - vi - IV - I", degrees: [0, 9, 5, 0], types: ["maj", "min", "maj", "maj"] },
+            { name: "Andaluz (Flamenco/Rock)", spoken: "Seis menor, cinco, quatro, três", roman: "vi - V - IV - III", degrees: [9, 7, 5, 4], types: ["min", "maj", "maj", "maj"] },
+            { name: "Rock Clássico", spoken: "Um, bemol sete, quatro, um", roman: "I - bVII - IV - I", degrees: [0, 10, 5, 0], types: ["maj", "maj", "maj", "maj"] },
+            { name: "Blues de 3 Acordes", spoken: "Um, quatro, um, cinco, um", roman: "I - IV - I - V - I", degrees: [0, 5, 0, 7, 0], types: ["maj", "maj", "maj", "maj", "maj"] },
+            { name: "Samba / Bossa Nova", spoken: "Um, dois maior, dois menor, cinco", roman: "I - II7 - ii - V", degrees: [0, 2, 2, 7], types: ["maj", "maj", "min", "maj"] },
+            { name: "Sensação Suspensiva", spoken: "Quatro, cinco, um", roman: "IV - V - I", degrees: [5, 7, 0], types: ["maj", "maj", "maj"] },
+            { name: "Pop Épico / Heroico", spoken: "Seis menor, cinco, quatro, cinco", roman: "vi - V - IV - V", degrees: [9, 7, 5, 7], types: ["min", "maj", "maj", "maj"] },
+            { name: "Balada Suave", spoken: "Um, três menor, quatro, cinco", roman: "I - iii - IV - V", degrees: [0, 4, 5, 7], types: ["maj", "min", "maj", "maj"] },
+            { name: "Ciclo de Quintas Curto", spoken: "Três menor, seis menor, dois menor, cinco, um", roman: "iii - vi - ii - V - I", degrees: [4, 9, 2, 7, 0], types: ["min", "min", "min", "maj", "maj"] }
+        ];
+
         const KEY_SEMITONES = {
             "C": 0, "C#": 1, "Db": 1, "D": 2, "D#": 3, "Eb": 3, 
             "E": 4, "F": 5, "F#": 6, "Gb": 6, "G": 7, "G#": 8, 
@@ -569,12 +606,24 @@
             playChord(freqs, duration = 1.5, startTime = 0) {
                 freqs.forEach(f => this.playNote(f, duration, startTime, 0.6));
             }
+
+            // Gera frequências de triades (Maiores ou Menores)
+            getChordFreqs(rootSemitones, type = "maj") {
+                const thirdOffset = type === "min" ? 3 : 4;
+                const fifthOffset = 7;
+                return [
+                    this.getFreqFromAbsoluteSemitones(rootSemitones),
+                    this.getFreqFromAbsoluteSemitones(rootSemitones + thirdOffset),
+                    this.getFreqFromAbsoluteSemitones(rootSemitones + fifthOffset)
+                ];
+            }
         }
 
         class EarTrainingApp {
             constructor() {
                 this.audio = new AudioEngine();
                 this.isRunning = false;
+                this.trainingMode = 'notes';
                 this.selectedKey = 'C';
                 this.voiceMode = 'note';
                 this.responseTime = 3;
@@ -584,6 +633,7 @@
                 this.initSpeech();
 
                 this.toggleBtn = document.getElementById('toggleLoopBtn');
+                this.modeSelect = document.getElementById('modeSelect');
                 this.keySelect = document.getElementById('keySelect');
                 this.octaveRangeSelect = document.getElementById('octaveRangeSelect');
                 this.voiceModeSelect = document.getElementById('voiceModeSelect');
@@ -612,6 +662,9 @@
             }
 
             bindEvents() {
+                this.modeSelect.addEventListener('change', (e) => {
+                    this.trainingMode = e.target.value;
+                });
                 this.toggleSettingsBtn.addEventListener('click', () => {
                     const isHidden = this.controlsPanel.classList.contains('d-none');
                     if (isHidden) {
@@ -664,19 +717,28 @@
             }
 
             speak(text) {
-                if ('speechSynthesis' in window && text) {
-                    try {
-                        window.speechSynthesis.cancel();
-                        const utterance = new SpeechSynthesisUtterance(text);
-                        if (this.speechVoice) utterance.voice = this.speechVoice;
-                        utterance.lang = 'pt-BR';
-                        utterance.rate = 1.0;
-                        utterance.volume = Math.min(1.0, this.audio.volume * 1.2);
-                        window.speechSynthesis.speak(utterance);
-                    } catch (e) {
-                        console.error('Erro na fala:', e);
+                return new Promise((resolve) => {
+                    if ('speechSynthesis' in window && text) {
+                        try {
+                            window.speechSynthesis.cancel();
+                            const utterance = new SpeechSynthesisUtterance(text);
+                            if (this.speechVoice) utterance.voice = this.speechVoice;
+                            utterance.lang = 'pt-BR';
+                            utterance.rate = 1.0;
+                            utterance.volume = Math.min(1.0, this.audio.volume * 1.2);
+
+                            utterance.onend = () => resolve();
+                            utterance.onerror = () => resolve();
+
+                            window.speechSynthesis.speak(utterance);
+                        } catch (e) {
+                            console.error('Erro na fala:', e);
+                            resolve();
+                        }
+                    } else {
+                        resolve();
                     }
-                }
+                });
             }
 
             toggleLoop() {
@@ -732,6 +794,82 @@
             async runCycle() {
                 if (!this.isRunning) return;
 
+                if (this.trainingMode === 'cadences') {
+                    await this.runCadenceCycle();
+                } else {
+                    await this.runNotesCycle();
+                }
+            }
+
+            async runCadenceCycle() {
+                if (!this.isRunning) return;
+
+                // 1. Tom Atual
+                let rootKey = this.selectedKey;
+                if (rootKey === 'RANDOM') {
+                    rootKey = ALL_KEYS[Math.floor(Math.random() * ALL_KEYS.length)];
+                }
+                const rootIdx = KEY_SEMITONES[rootKey];
+
+                // 2. Tocar Nota de Referência da Tônica (Sem a cadência inicial)
+                this.statusBadge.className = 'badge bg-primary mb-2 px-3 py-2 text-uppercase';
+                this.statusBadge.textContent = `Tom: ${rootKey} Maior`;
+                this.statusText.textContent = `Tocando Nota de Referência da Tônica (${rootKey})...`;
+                this.statusSpinner.classList.remove('d-none');
+                this.noteResultBox.classList.add('d-none');
+
+                const rootFreq = this.audio.getFreqFromAbsoluteSemitones(rootIdx);
+                this.audio.playNote(rootFreq, 1.5, 0, 1.0);
+                await this.sleep(1800);
+                if (!this.isRunning) return;
+
+                // 3. Sorteia Cadência
+                const cadence = FAMOUS_CADENCES[Math.floor(Math.random() * FAMOUS_CADENCES.length)];
+
+                // 4. Toca a Progressão de Acordes
+                this.statusText.textContent = 'Ouça a cadência de acordes... Tente identificar!';
+                this.statusSpinner.classList.add('d-none');
+
+                for (let i = 0; i < cadence.degrees.length; i++) {
+                    if (!this.isRunning) return;
+                    const chordRootSemitones = rootIdx + cadence.degrees[i];
+                    const chordFreqs = this.audio.getChordFreqs(chordRootSemitones, cadence.types[i]);
+                    this.audio.playChord(chordFreqs, 1.4, 0);
+                    await this.sleep(1300);
+                }
+
+                if (!this.isRunning) return;
+
+                // 5. Tempo de Resposta
+                const totalSeconds = this.responseTime;
+                for (let i = totalSeconds; i > 0; i--) {
+                    if (!this.isRunning) return;
+                    this.updateProgress(((totalSeconds - i + 1) / totalSeconds) * 100, `Resposta em ${i}s...`);
+                    await this.sleep(1000);
+                }
+
+                if (!this.isRunning) return;
+
+                // 6. Revelar e Falar a Cadência Sucintamente
+                this.statusBadge.className = 'badge bg-success mb-2 px-3 py-2 text-uppercase';
+                this.statusBadge.textContent = `Tom: ${rootKey} Maior`;
+                this.statusText.textContent = `Cadência Revelada!`;
+                
+                this.targetNoteName.style.fontSize = '2.5rem';
+                this.targetNoteName.textContent = cadence.roman;
+                this.targetNoteDetail.textContent = cadence.name;
+                this.noteResultBox.classList.remove('d-none');
+
+                // Aguarda o término da locução sucinta
+                await this.speak(cadence.spoken);
+                await this.sleep(1000);
+
+                this.targetNoteName.style.fontSize = '4.5rem';
+            }
+
+            async runNotesCycle() {
+                if (!this.isRunning) return;
+
                 // 1. Determinar Tom Atual
                 let rootKey = this.selectedKey;
                 if (rootKey === 'RANDOM') {
@@ -778,7 +916,6 @@
                 const targetDegreeIndex = Math.floor(Math.random() * 7);
                 const semitonesFromRoot = MAJOR_SCALE_INTERVALS[targetDegreeIndex];
                 
-                // Variação de oitava baseada na escolha do usuário (-1, 0, +1, etc)
                 let octaveShift = 0;
                 if (this.octaveRange > 0) {
                     const shifts = [];
@@ -833,9 +970,10 @@
                     speechText = `${ptName}, ${degreeSpeech}`;
                 }
 
-                this.speak(speechText);
+                // Aguarda o encerramento da fala antes de iniciar o som da escala de retorno
+                await this.speak(speechText);
+                await this.sleep(400);
 
-                await this.sleep(1200);
                 if (!this.isRunning) return;
 
                 // 6. Tocando Escala de Retorno respeitando a oitava da nota sorteada
