@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Melodic Dictation Master - Ditado Melódico Contínuo</title>
+    
+    <!-- Metadados PWA para Celular -->
+    <meta name="theme-color" content="#0f172a">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="MelodicMaster">
+    <link rel="apple-touch-icon" href="https://placehold.co/192x192/0284c7/ffffff?text=M">
+    
+    <!-- Manifest PWA Embutido -->
+    <link rel="manifest" href="data:application/json;base64,ewogICJuYW1lIjogIk1lbG9kaWMgRGljdGF0aW9uIE1hc3RlciIsCiAgInNob3J0X25hbWUiOiAiTWVsb2RpY01hc3RlciIsCiAgInN0YXJ0X3VybCI6ICIuIiwKICAiZGlzcGxheSI6ICJzdGFuZGFsb25lIiwKICAiYmFja2dyb3VuZF9jb2xvcjogIiMwZjE3MmEiLAogICJ0aGVtZV9jb2xvciI6ICIjMDI4NGM3IiwKICAiaWNvbnMiOiBbCiAgICB7CiAgICAgICJzcmMiOiAiaHR0cHM6Ly9wbGFjZWhvbGQuY28vMTkyeDE5Mi8wMjg0YzcvZmZmZmZmP3RleHQ9TSIsCiAgICAgICJzaXplcyI6ICIxOTJ4MTkyIiwKICAgICAgInR5cGUiOiAiaW1hZ2UvcG5nIgogICAgfQogIF0KfQ==">
+
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Fontes Google -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- FontAwesome para Ícones -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Plus Jakarta Sans', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f7ff',
+                            100: '#e0effe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                            900: '#0c4a6e',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        .note-btn {
+            transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .note-btn:active {
+            transform: scale(0.95);
+        }
+        .black-key {
+            background: linear-gradient(180deg, #1e293b 0%, #0f172a 100%);
+        }
+        .white-key {
+            background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%);
+        }
+        .pulse-glow {
+            box-shadow: 0 0 20px rgba(2, 132, 199, 0.35);
+        }
+        .slot-active {
+            box-shadow: 0 0 14px rgba(2, 132, 199, 0.45);
+        }
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: rgba(15, 23, 42, 0.6);
+            border-radius: 9999px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: rgba(51, 65, 85, 0.8);
+            border-radius: 9999px;
+        }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col justify-between font-sans antialiased selection:bg-brand-500 selection:text-white">
+
+    <!-- Header / Navbar -->
+    <header class="border-b border-slate-800 bg-slate-900/60 backdrop-blur-md sticky top-0 z-40">
+        <div class="max-w-4xl mx-auto px-4 py-3 flex justify-between items-center gap-2">
+            <div class="flex items-center gap-3">
+                <div class="bg-gradient-to-tr from-brand-600 to-indigo-500 p-2 rounded-xl shadow-lg shadow-brand-500/20">
+                    <i class="fa-solid fa-music text-white text-lg"></i>
+                </div>
+                <div>
+                    <h1 class="font-bold text-base sm:text-lg leading-tight text-white">Melodic Dictation Master</h1>
+                    <p class="text-[11px] sm:text-xs text-slate-400">Ditado Melódico Contínuo &amp; Dó Móvel</p>
+                </div>
+            </div>
+
+            <!-- Header Actions -->
+            <div class="flex items-center gap-2">
+                <!-- Botão Rápido de Controle do Drone (visível quando modo Drone estiver ativo) -->
+                <button id="header-drone-toggle" onclick="toggleDroneMute()" class="hidden items-center gap-1.5 bg-indigo-950/90 hover:bg-indigo-900 text-indigo-300 px-2.5 py-1.5 rounded-xl border border-indigo-500/40 text-xs font-bold transition-all" title="Ligar/Silenciar som do Drone">
+                    <i id="header-drone-icon" class="fa-solid fa-wave-square text-indigo-400 animate-pulse"></i>
+                    <span class="hidden sm:inline" id="header-drone-label">Drone ON</span>
+                </button>
+
+                <!-- Tonalidade Atual em Destaque -->
+                <div class="flex items-center gap-1.5 bg-slate-800/80 px-3 py-1.5 rounded-xl border border-slate-700/50 text-xs sm:text-sm">
+                    <i class="fa-solid fa-key text-brand-400"></i>
+                    <span id="current-tonality-badge" class="font-bold text-brand-300">Tom: C</span>
+                </div>
+
+                <!-- Botão de Estatísticas -->
+                <button onclick="toggleStatsModal()" class="flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-200 px-3 py-1.5 rounded-xl border border-slate-700/50 text-xs sm:text-sm font-semibold transition-all">
+                    <i class="fa-solid fa-chart-column text-brand-400"></i>
+                    <span class="hidden sm:inline">Stats</span>
+                </button>
+
+                <!-- Botão de Toggle do Painel de Configurações -->
+                <button onclick="toggleOptionsPanel()" class="flex items-center gap-1.5 bg-brand-600 hover:bg-brand-500 text-white px-3 py-1.5 rounded-xl text-xs sm:text-sm font-semibold transition-all shadow-md">
+                    <i class="fa-solid fa-sliders"></i>
+                    <span>Opções</span>
+                    <i id="options-toggle-icon" class="fa-solid fa-chevron-down text-xs transition-transform duration-200"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-4xl mx-auto px-4 py-4 w-full flex-1 flex flex-col gap-4">
+
+        <!-- PAINEL RETRÁTIL DE OPÇÕES E CONFIGURAÇÕES -->
+        <section id="options-panel" class="hidden bg-slate-900/95 border border-slate-800 rounded-2xl p-4 shadow-xl transition-all space-y-4">
+            <div class="flex items-center justify-between border-b border-slate-800 pb-2">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-wider flex items-center gap-2">
+                    <i class="fa-solid fa-gear text-brand-400"></i> Configurações do Ditado Melódico
+                </h3>
+                <span class="text-[10px] text-slate-500">Personalize tamanho, referência e fluxo contínuo</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
+
+                <!-- Tonalidade -->
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5">
+                    <label class="font-semibold text-slate-300 block">Tonalidade Principal</label>
+                    <select id="tonality-select" onchange="setTonality(this.value)" class="w-full bg-slate-800 border border-slate-700 text-slate-200 rounded-lg px-2 py-1.5 focus:outline-none focus:border-brand-500 font-medium">
+                        <option value="C">Dó Maior (C)</option>
+                        <option value="D">Ré Maior (D)</option>
+                        <option value="E">Mi Maior (E)</option>
+                        <option value="F">Fá Maior (F)</option>
+                        <option value="G">Sol Maior (G)</option>
+                        <option value="A">Lá Maior (A)</option>
+                        <option value="B">Si Maior (B)</option>
+                        <option value="RANDOM">✨ Alternar Aleatoriamente</option>
+                    </select>
+                </div>
+
+                <!-- Tipo de Notas (Escala Maior vs Cromática) -->
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5">
+                    <label class="font-semibold text-slate-300 block">Notas do Exercício</label>
+                    <div class="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                        <button id="mode-diatonic" onclick="setNoteSelectionMode('diatonic')" class="flex-1 py-1 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm">Escala Maior</button>
+                        <button id="mode-chromatic" onclick="setNoteSelectionMode('chromatic')" class="flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">Cromática</button>
+                    </div>
+                </div>
+
+                <!-- Tamanho da Sequência (2 a 6 notas) -->
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5">
+                    <label class="font-semibold text-slate-300 flex items-center justify-between">
+                        <span>Tamanho da Sequência</span>
+                        <span class="text-[10px] text-brand-400 font-bold" id="seq-length-badge">3 notas</span>
+                    </label>
+                    <div class="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                        <button id="seq-len-2" onclick="setSequenceLength(2)" class="flex-1 py-1 rounded-lg font-bold transition-all text-slate-400 hover:text-slate-200">2</button>
+                        <button id="seq-len-3" onclick="setSequenceLength(3)" class="flex-1 py-1 rounded-lg font-bold transition-all bg-brand-600 text-white shadow-sm">3</button>
+                        <button id="seq-len-4" onclick="setSequenceLength(4)" class="flex-1 py-1 rounded-lg font-bold transition-all text-slate-400 hover:text-slate-200">4</button>
+                        <button id="seq-len-5" onclick="setSequenceLength(5)" class="flex-1 py-1 rounded-lg font-bold transition-all text-slate-400 hover:text-slate-200">5</button>
+                        <button id="seq-len-6" onclick="setSequenceLength(6)" class="flex-1 py-1 rounded-lg font-bold transition-all text-slate-400 hover:text-slate-200">6</button>
+                    </div>
+                </div>
+
+                <!-- Referência Inicial (Cadência, Nota de Referência, Nota Drone) -->
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5 sm:col-span-2">
+                    <label class="font-semibold text-slate-300 block">Referência Tonal Antes / Durante</label>
+                    <div class="grid grid-cols-3 gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                        <button id="ref-mode-cadence" onclick="setReferenceMode('cadence')" class="py-1 px-1.5 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm">
+                            <i class="fa-solid fa-layer-group mr-1 text-[10px]"></i>Cadência
+                        </button>
+                        <button id="ref-mode-tonic" onclick="setReferenceMode('tonic')" class="py-1 px-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">
+                            <i class="fa-solid fa-bell mr-1 text-[10px]"></i>Nota Tônica
+                        </button>
+                        <button id="ref-mode-drone" onclick="setReferenceMode('drone')" class="py-1 px-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">
+                            <i class="fa-solid fa-wave-square mr-1 text-[10px]"></i>Nota Drone
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Sub-opção de Cadência (quando Cadência está selecionada) -->
+                <div id="cadence-subtype-box" class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5 transition-all">
+                    <label class="font-semibold text-slate-300 block">Tipo de Cadência</label>
+                    <div class="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                        <button id="cadence-fast" onclick="setCadenceType('FAST')" class="flex-1 py-1 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm">I - V - I</button>
+                        <button id="cadence-full" onclick="setCadenceType('FULL')" class="flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">I - IV - V7 - I</button>
+                    </div>
+                </div>
+
+                <!-- Volume da Nota Drone (exclusivo para o modo Drone) -->
+                <div id="drone-volume-box" class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5 opacity-40 pointer-events-none transition-all">
+                    <label class="font-semibold text-slate-300 flex items-center justify-between">
+                        <span>Volume da Nota Drone</span>
+                        <span class="text-[10px] text-indigo-400 font-bold" id="drone-volume-badge">40%</span>
+                    </label>
+                    <div class="flex items-center gap-2 bg-slate-900 px-2.5 py-1.5 rounded-lg border border-slate-800">
+                        <i class="fa-solid fa-volume-low text-slate-400 text-[11px]"></i>
+                        <input id="drone-volume-slider" type="range" min="0" max="100" value="40" oninput="setDroneVolume(this.value)" class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer accent-indigo-500">
+                        <i class="fa-solid fa-volume-high text-indigo-400 text-[11px]"></i>
+                    </div>
+                </div>
+
+                <!-- Alcance de Oitavas -->
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5">
+                    <label class="font-semibold text-slate-300 block">Alcance de Oitavas</label>
+                    <div class="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                        <button id="oct-1" onclick="setOctaveRange('1')" class="flex-1 py-1 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm">1 Oitava</button>
+                        <button id="oct-2" onclick="setOctaveRange('2')" class="flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">2 Oitavas</button>
+                    </div>
+                </div>
+
+                <!-- Velocidade da Execução -->
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5">
+                    <label class="font-semibold text-slate-300 block">Velocidade do Ditado</label>
+                    <div class="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                        <button id="speed-075" onclick="setPlaybackSpeed(0.75)" class="flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">0.75x</button>
+                        <button id="speed-10" onclick="setPlaybackSpeed(1.0)" class="flex-1 py-1 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm">1.0x</button>
+                        <button id="speed-125" onclick="setPlaybackSpeed(1.25)" class="flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">1.25x</button>
+                        <button id="speed-15" onclick="setPlaybackSpeed(1.5)" class="flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">1.5x</button>
+                    </div>
+                </div>
+
+                <!-- Avanço Automático (Ativado por padrão) -->
+                <div class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5">
+                    <label class="font-semibold text-slate-300 block">Avanço Automático</label>
+                    <div class="flex gap-1 bg-slate-900 p-1 rounded-lg border border-slate-800">
+                        <button id="auto-play-on" onclick="setAutoPlay(true)" class="flex-1 py-1 rounded-lg font-medium transition-all bg-emerald-600 text-white shadow-sm">
+                            <i class="fa-solid fa-bolt text-[10px] mr-1"></i>Contínuo
+                        </button>
+                        <button id="auto-play-off" onclick="setAutoPlay(false)" class="flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200">
+                            <i class="fa-solid fa-hand text-[10px] mr-1"></i>Manual
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </section>
+
+        <!-- PAINEL PRINCIPAL DE CONTROLES, PROGRESSO DO DITADO E STATUS -->
+        <section class="bg-slate-900 border border-slate-800 rounded-3xl p-4 shadow-xl space-y-3.5">
+            
+            <!-- Status e Placar -->
+            <div class="flex flex-col sm:flex-row justify-between items-center gap-3 bg-slate-950/60 border border-slate-800/80 p-3 rounded-2xl">
+                <div class="flex items-center gap-3 w-full sm:w-auto">
+                    <span id="feedback-badge" class="text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700/50 font-bold shrink-0">Aguardando...</span>
+                    <div class="min-w-0">
+                        <h2 id="status-text" class="font-extrabold text-base sm:text-lg text-white truncate">Pronto para o ditado melódico?</h2>
+                        <p id="sub-status" class="text-xs text-slate-400 truncate">Clique em "Iniciar / Nova Sequência" para ouvir</p>
+                    </div>
+                </div>
+
+                <!-- Placar e Sequência -->
+                <div class="flex items-center gap-3 bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-xl text-xs font-semibold shrink-0">
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-trophy text-amber-400"></i>
+                        <span>Pontos: <strong id="score-count" class="text-white">0</strong></span>
+                    </div>
+                    <div class="h-3 w-px bg-slate-700"></div>
+                    <div class="flex items-center gap-1.5">
+                        <i class="fa-solid fa-fire text-orange-500"></i>
+                        <span>Streak: <strong id="streak-count" class="text-white">0</strong></span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SLOTS VISUAIS DE PROGRESSO DA SEQUÊNCIA MELÓDICA -->
+            <div class="bg-slate-950/70 border border-slate-800/80 rounded-2xl p-3 flex flex-col items-center justify-center gap-2">
+                <div class="flex items-center justify-between w-full px-1">
+                    <span class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">Progresso da Melodia</span>
+                    <span id="ref-mode-indicator" class="text-[11px] font-semibold text-brand-400">Ref: Cadência</span>
+                </div>
+                <div id="sequence-slots-container" class="flex flex-wrap items-center justify-center gap-2 w-full py-1">
+                    <!-- Slots preenchidos dinamicamente via JS -->
+                </div>
+            </div>
+
+            <!-- Botões Principais de Ação -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                <button onclick="startNewSequence()" class="w-full bg-gradient-to-r from-brand-600 to-indigo-600 hover:from-brand-500 hover:to-indigo-500 text-white font-bold py-3 px-4 rounded-2xl shadow-lg shadow-brand-500/20 active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Iniciar / Nova Sequência</span>
+                </button>
+                <button onclick="repeatCurrentSequence()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700/60 font-bold py-3 px-4 rounded-2xl active:scale-[0.98] transition-all flex items-center justify-center gap-2 text-sm">
+                    <i class="fa-solid fa-rotate-right text-brand-400"></i>
+                    <span>Repetir Sequência</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- SEÇÃO DO TECLADO DE RESPOSTAS (DÓ MÓVEL DINÂMICO) -->
+        <section class="bg-slate-900/50 border border-slate-800/80 rounded-3xl p-3 shadow-xl space-y-2">
+            <div class="flex items-center justify-between px-1">
+                <span class="text-xs font-semibold text-slate-400 uppercase tracking-wider">Toque as notas na ordem ouvida</span>
+                <div class="flex items-center gap-2">
+                    <button onclick="clearCurrentProgress()" class="text-[11px] text-slate-400 hover:text-amber-400 font-semibold transition-colors flex items-center gap-1">
+                        <i class="fa-solid fa-eraser"></i> Reiniciar tentativas desta melodia
+                    </button>
+                </div>
+            </div>
+
+            <!-- Container das Teclas das Notas -->
+            <div id="keyboard-container" class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-7 gap-1.5 overflow-y-auto p-1 custom-scrollbar">
+                <!-- Preenchido dinamicamente via JS -->
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal de Estatísticas -->
+    <div id="stats-modal" class="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 w-full max-w-xl rounded-3xl p-6 shadow-2xl relative max-h-[90vh] flex flex-col">
+            <div class="flex justify-between items-center border-b border-slate-800 pb-3 mb-3">
+                <div class="flex items-center gap-2">
+                    <i class="fa-solid fa-chart-column text-brand-500 text-xl"></i>
+                    <h3 class="text-lg font-bold text-white">Estatísticas do Ditado Melódico</h3>
+                </div>
+                <button onclick="toggleStatsModal()" class="text-slate-400 hover:text-white p-1 rounded-lg">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- Seleção da Aba de Estatísticas -->
+            <div class="flex gap-2 mb-3">
+                <button id="stats-tab-degrees" onclick="switchStatsTab('degrees')" class="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all bg-brand-600 text-white">
+                    Por Graus (Dó Móvel)
+                </button>
+                <button id="stats-tab-tonalities" onclick="switchStatsTab('tonalities')" class="flex-1 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-800 text-slate-400 hover:text-slate-200">
+                    Por Tonalidade
+                </button>
+            </div>
+
+            <div class="flex-1 overflow-y-auto pr-1 space-y-2.5 custom-scrollbar" id="stats-container">
+                <!-- Preenchido via JS -->
+            </div>
+
+            <div class="border-t border-slate-800 pt-3 mt-3 flex justify-between items-center">
+                <span id="total-attempts-text" class="text-xs text-slate-400">Total de notas avaliadas: 0</span>
+                <button onclick="resetStats()" class="px-3 py-1.5 bg-rose-500/10 hover:bg-rose-500/20 text-rose-400 border border-rose-500/20 rounded-xl text-xs font-bold transition-all">
+                    Zerar Estatísticas
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Rodapé -->
+    <footer class="border-t border-slate-800/60 py-3 text-center text-xs text-slate-500">
+        Melodic Dictation Master &bull; Treino Auditivo Contínuo &amp; Dó Móvel
+    </footer>
+
+    <script>
+        // --- BASE DE DADOS DE NOTAS (C4 A C6 - 2 OITAVAS) ---
+        const ALL_NOTES = [
+            { name: 'C',   freq: 261.63, alt: 'Dó',          type: 'white', pitchClass: 0,  octave: 4 },
+            { name: 'C#',  freq: 277.18, alt: 'Dó# / Reb',   type: 'black', pitchClass: 1,  octave: 4 },
+            { name: 'D',   freq: 293.66, alt: 'Ré',          type: 'white', pitchClass: 2,  octave: 4 },
+            { name: 'D#',  freq: 311.13, alt: 'Ré# / Mib',   type: 'black', pitchClass: 3,  octave: 4 },
+            { name: 'E',   freq: 329.63, alt: 'Mi',          type: 'white', pitchClass: 4,  octave: 4 },
+            { name: 'F',   freq: 349.23, alt: 'Fá',          type: 'white', pitchClass: 5,  octave: 4 },
+            { name: 'F#',  freq: 369.99, alt: 'Fá# / Solb',  type: 'black', pitchClass: 6,  octave: 4 },
+            { name: 'G',   freq: 392.00, alt: 'Sol',         type: 'white', pitchClass: 7,  octave: 4 },
+            { name: 'G#',  freq: 415.30, alt: 'Sol# / Láb',  type: 'black', pitchClass: 8,  octave: 4 },
+            { name: 'A',   freq: 440.00, alt: 'Lá',          type: 'white', pitchClass: 9,  octave: 4 },
+            { name: 'A#',  freq: 466.16, alt: 'Lá# / Sib',   type: 'black', pitchClass: 10, octave: 4 },
+            { name: 'B',   freq: 493.88, alt: 'Si',          type: 'white', pitchClass: 11, octave: 4 },
+            { name: 'C5',  freq: 523.25, alt: 'Dó (Agudo)',  type: 'white', pitchClass: 0,  octave: 4 },
+
+            { name: 'C#5', freq: 554.37, alt: 'Dó# / Reb',   type: 'black', pitchClass: 1,  octave: 5 },
+            { name: 'D5',  freq: 587.33, alt: 'Ré',          type: 'white', pitchClass: 2,  octave: 5 },
+            { name: 'D#5', freq: 622.25, alt: 'Ré# / Mib',   type: 'black', pitchClass: 3,  octave: 5 },
+            { name: 'E5',  freq: 659.25, alt: 'Mi',          type: 'white', pitchClass: 4,  octave: 5 },
+            { name: 'F5',  freq: 698.46, alt: 'Fá',          type: 'white', pitchClass: 5,  octave: 5 },
+            { name: 'F#5', freq: 739.99, alt: 'Fá# / Solb',  type: 'black', pitchClass: 6,  octave: 5 },
+            { name: 'G5',  freq: 783.99, alt: 'Sol',         type: 'white', pitchClass: 7,  octave: 5 },
+            { name: 'G#5', freq: 830.61, alt: 'Sol# / Láb',  type: 'black', pitchClass: 8,  octave: 5 },
+            { name: 'A5',  freq: 880.00, alt: 'Lá',          type: 'white', pitchClass: 9,  octave: 5 },
+            { name: 'A#5', freq: 932.33, alt: 'Lá# / Sib',   type: 'black', pitchClass: 10, octave: 5 },
+            { name: 'B5',  freq: 987.77, alt: 'Si',          type: 'white', pitchClass: 11, octave: 5 },
+            { name: 'C6',  freq: 1046.50,alt: 'Dó (Altíssimo)', type: 'white', pitchClass: 0, octave: 5 }
+        ];
+
+        // Mapeamento de Tonalidades e Frequências Base
+        const TONALITIES = {
+            'C': { name: 'Dó Maior',  pitchClass: 0,  intervals: [0, 2, 4, 5, 7, 9, 11], rootFreq: 261.63 },
+            'D': { name: 'Ré Maior',  pitchClass: 2,  intervals: [2, 4, 6, 7, 9, 11, 1],  rootFreq: 293.66 },
+            'E': { name: 'Mi Maior',  pitchClass: 4,  intervals: [4, 6, 8, 9, 11, 1, 3],  rootFreq: 329.63 },
+            'F': { name: 'Fá Maior',  pitchClass: 5,  intervals: [5, 7, 9, 10, 0, 2, 4],  rootFreq: 349.23 },
+            'G': { name: 'Sol Maior', pitchClass: 7,  intervals: [7, 9, 11, 0, 2, 4, 6],  rootFreq: 392.00 },
+            'A': { name: 'Lá Maior',  pitchClass: 9,  intervals: [9, 11, 1, 2, 4, 6, 8],  rootFreq: 440.00 },
+            'B': { name: 'Si Maior',  pitchClass: 11, intervals: [11, 1, 3, 4, 6, 8, 10], rootFreq: 493.88 }
+        };
+
+        // Rótulos de Dó Móvel relativos à Tônica
+        const MOVABLE_DO_NAMES = {
+            0:  'Dó (1ª)',
+            1:  'Dó# / Reb',
+            2:  'Ré (2ª)',
+            3:  'Ré# / Mib',
+            4:  'Mi (3ª)',
+            5:  'Fá (4ª)',
+            6:  'Fá# / Solb',
+            7:  'Sol (5ª)',
+            8:  'Sol# / Láb',
+            9:  'Lá (6ª)',
+            10: 'Lá# / Sib',
+            11: 'Si (7ª)'
+        };
+
+        function getMovableDoLabel(note, tonalityKey) {
+            const tonicPitch = TONALITIES[tonalityKey] ? TONALITIES[tonalityKey].pitchClass : 0;
+            const semitoneInterval = (note.pitchClass - tonicPitch + 12) % 12;
+            return MOVABLE_DO_NAMES[semitoneInterval] || note.alt;
+        }
+
+        // --- ESTADO DA APLICAÇÃO ---
+        let selectedTonalityKey = 'C';
+        let currentTonalityKey = 'C';
+        let selectedMode = 'diatonic';     // 'diatonic' | 'chromatic'
+        let selectedOctaves = '1';         // '1' | '2'
+        let sequenceLength = 3;            // 2 a 6 notas
+        let referenceMode = 'cadence';     // 'cadence' | 'tonic' | 'drone'
+        let cadenceType = 'FAST';          // 'FAST' | 'FULL'
+        let playbackSpeed = 1.0;           // 0.75 | 1.0 | 1.25 | 1.5
+        let autoPlayNext = true;           // Ativado por padrão para treino contínuo
+
+        let activeNotes = [];
+        let targetSequence = [];           // Array de objetos de nota sorteados
+        let userGuessedSequence = [];      // Notas já acertadas na rodada atual
+        let currentStepIndex = 0;          // Posição atual (0 até sequenceLength - 1)
+
+        let isPlaying = false;
+        let userCanAnswer = false;
+        let score = 0;
+        let streak = 0;
+        let playbackSessionId = 0;
+
+        // --- WEB AUDIO API & DRONE CONTÍNUO ---
+        let audioCtx = null;
+        let masterGainNode = null;
+        let compressorNode = null;
+
+        // Nós dedicados ao Drone contínuo
+        let droneOsc1 = null;
+        let droneOsc2 = null;
+        let droneFilter = null;
+        let droneGain = null;
+        let isDroneActive = false;
+        let isDroneMuted = false;
+        let droneVolume = 0.16; // Valor padrão correspondente a 40% no slider (máx 0.40)
+
+        // Estatísticas salvas no localStorage
+        let statsData = JSON.parse(localStorage.getItem('melodic_dictation_stats') || '{}');
+        let activeStatsTab = 'degrees';
+
+        function saveStats() {
+            localStorage.setItem('melodic_dictation_stats', JSON.stringify(statsData));
+        }
+
+        function recordNoteAttempt(noteObj, tonalityKey, isCorrect) {
+            const tonicPitch = TONALITIES[tonalityKey].pitchClass;
+            const degreeSemitone = (noteObj.pitchClass - tonicPitch + 12) % 12;
+            const degreeKey = `degree_${degreeSemitone}`;
+
+            if (!statsData[degreeKey]) statsData[degreeKey] = { attempts: 0, correct: 0 };
+            statsData[degreeKey].attempts += 1;
+            if (isCorrect) statsData[degreeKey].correct += 1;
+
+            const tonKey = `tonality_${tonalityKey}`;
+            if (!statsData[tonKey]) statsData[tonKey] = { attempts: 0, correct: 0 };
+            statsData[tonKey].attempts += 1;
+            if (isCorrect) statsData[tonKey].correct += 1;
+
+            saveStats();
+        }
+
+        function getAudioContext() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+                compressorNode = audioCtx.createDynamicsCompressor();
+                compressorNode.threshold.setValueAtTime(-14, audioCtx.currentTime);
+                compressorNode.knee.setValueAtTime(10, audioCtx.currentTime);
+                compressorNode.ratio.setValueAtTime(6, audioCtx.currentTime);
+                compressorNode.attack.setValueAtTime(0.005, audioCtx.currentTime);
+                compressorNode.release.setValueAtTime(0.15, audioCtx.currentTime);
+
+                masterGainNode = audioCtx.createGain();
+                masterGainNode.gain.setValueAtTime(0.6, audioCtx.currentTime);
+
+                compressorNode.connect(masterGainNode);
+                masterGainNode.connect(audioCtx.destination);
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        // --- CONTROLE DO DRONE SUAVE CONTÍNUO ---
+        function startOrUpdateDrone(tonalityKey) {
+            const ctx = getAudioContext();
+            const rootFreq = (TONALITIES[tonalityKey] ? TONALITIES[tonalityKey].rootFreq : 261.63) / 2; // Oitava grave (C3..B3)
+
+            if (!droneGain) {
+                droneOsc1 = ctx.createOscillator();
+                droneOsc2 = ctx.createOscillator();
+                droneFilter = ctx.createBiquadFilter();
+                droneGain = ctx.createGain();
+
+                droneOsc1.type = 'sine';
+                droneOsc2.type = 'triangle';
+
+                droneFilter.type = 'lowpass';
+                droneFilter.frequency.setValueAtTime(360, ctx.currentTime);
+
+                droneGain.gain.setValueAtTime(0.0001, ctx.currentTime);
+
+                droneOsc1.connect(droneFilter);
+                droneOsc2.connect(droneFilter);
+                droneFilter.connect(droneGain);
+                droneGain.connect(compressorNode);
+
+                droneOsc1.frequency.setValueAtTime(rootFreq, ctx.currentTime);
+                droneOsc2.frequency.setValueAtTime(rootFreq * 1.5, ctx.currentTime); // Quinta justa bem sutil
+
+                droneOsc1.start(ctx.currentTime);
+                droneOsc2.start(ctx.currentTime);
+            } else {
+                // Transição suave de frequência ao mudar de tom
+                droneOsc1.frequency.setTargetAtTime(rootFreq, ctx.currentTime, 0.08);
+                droneOsc2.frequency.setTargetAtTime(rootFreq * 1.5, ctx.currentTime, 0.08);
+            }
+
+            isDroneActive = true;
+            const targetVol = isDroneMuted ? 0.0001 : droneVolume;
+            droneGain.gain.cancelScheduledValues(ctx.currentTime);
+            droneGain.gain.setTargetAtTime(targetVol, ctx.currentTime, 0.15);
+            updateDroneHeaderUI();
+        }
+
+        function setDroneVolume(percentValue) {
+            const pct = Math.max(0, Math.min(100, parseInt(percentValue, 10) || 0));
+            // Mapeia 0..100% para um ganho confortável e equilibrado (0.0001 até 0.40)
+            droneVolume = pct === 0 ? 0.0001 : (pct / 100) * 0.40;
+
+            const badge = document.getElementById('drone-volume-badge');
+            if (badge) badge.innerText = `${pct}%`;
+
+            if (droneGain && audioCtx && referenceMode === 'drone' && isDroneActive && !isDroneMuted) {
+                droneGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                droneGain.gain.setTargetAtTime(droneVolume, audioCtx.currentTime, 0.05);
+            }
+        }
+
+        function stopDrone() {
+            if (droneGain && audioCtx) {
+                droneGain.gain.cancelScheduledValues(audioCtx.currentTime);
+                droneGain.gain.setTargetAtTime(0.0001, audioCtx.currentTime, 0.12);
+            }
+            isDroneActive = false;
+            updateDroneHeaderUI();
+        }
+
+        function toggleDroneMute() {
+            isDroneMuted = !isDroneMuted;
+            if (referenceMode === 'drone' && isDroneActive) {
+                startOrUpdateDrone(currentTonalityKey);
+            }
+            updateDroneHeaderUI();
+        }
+
+        function updateDroneHeaderUI() {
+            const btn = document.getElementById('header-drone-toggle');
+            const icon = document.getElementById('header-drone-icon');
+            const label = document.getElementById('header-drone-label');
+            if (!btn) return;
+
+            if (referenceMode === 'drone') {
+                btn.classList.remove('hidden');
+                btn.classList.add('flex');
+                if (isDroneMuted) {
+                    btn.className = 'flex items-center gap-1.5 bg-slate-800 hover:bg-slate-700 text-slate-400 px-2.5 py-1.5 rounded-xl border border-slate-700 text-xs font-bold transition-all';
+                    icon.className = 'fa-solid fa-volume-xmark text-slate-500';
+                    label.innerText = 'Drone OFF';
+                } else {
+                    btn.className = 'flex items-center gap-1.5 bg-indigo-950/90 hover:bg-indigo-900 text-indigo-300 px-2.5 py-1.5 rounded-xl border border-indigo-500/40 text-xs font-bold transition-all';
+                    icon.className = 'fa-solid fa-wave-square text-indigo-400 animate-pulse';
+                    label.innerText = 'Drone ON';
+                }
+            } else {
+                btn.classList.add('hidden');
+                btn.classList.remove('flex');
+            }
+        }
+
+        // --- SINTETIZADOR DE NOTAS MELÓDICAS ---
+        function playTone(freq, startTime, duration, customVelocity = 0.85) {
+            const ctx = getAudioContext();
+
+            const oscMain = ctx.createOscillator();
+            const gainMain = ctx.createGain();
+            oscMain.type = 'sine';
+            oscMain.frequency.setValueAtTime(freq, startTime);
+
+            const oscSub = ctx.createOscillator();
+            const gainSub = ctx.createGain();
+            oscSub.type = 'triangle';
+            oscSub.frequency.setValueAtTime(freq, startTime);
+
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(Math.min(freq * 2.4, 1700), startTime);
+
+            const peakVol = 0.45 * customVelocity;
+
+            gainMain.gain.setValueAtTime(0.0001, startTime);
+            gainMain.gain.linearRampToValueAtTime(peakVol, startTime + 0.035);
+            gainMain.gain.exponentialRampToValueAtTime(0.0001, startTime + duration);
+
+            gainSub.gain.setValueAtTime(0.0001, startTime);
+            gainSub.gain.linearRampToValueAtTime(peakVol * 0.25, startTime + 0.035);
+            gainSub.gain.exponentialRampToValueAtTime(0.0001, startTime + (duration * 0.8));
+
+            oscMain.connect(gainMain);
+            oscSub.connect(gainSub);
+
+            gainMain.connect(filter);
+            gainSub.connect(filter);
+
+            filter.connect(compressorNode);
+            oscMain.start(startTime);
+            oscSub.start(startTime);
+            oscMain.stop(startTime + duration + 0.08);
+            oscSub.stop(startTime + duration + 0.08);
+        }
+
+        function playChord(freqs, startTime, duration) {
+            freqs.forEach((freq, idx) => {
+                playTone(freq, startTime + (idx * 0.03), duration, 0.62);
+            });
+        }
+
+        function playCadenceForTonality(tonalityKey, startTime) {
+            const rootFreq = TONALITIES[tonalityKey] ? TONALITIES[tonalityKey].rootFreq : 261.63;
+            const semi = (n) => rootFreq * Math.pow(2, n / 12);
+
+            const I  = [semi(0), semi(4), semi(7)];
+            const IV = [semi(5), semi(9), semi(12)];
+            const V7 = [semi(7), semi(11), semi(14), semi(17)];
+            const V  = [semi(7), semi(11), semi(14)];
+
+            const beatDuration = 0.48 / playbackSpeed;
+            let current = startTime;
+
+            if (cadenceType === 'FAST') {
+                playChord(I, current, beatDuration * 1.15);
+                current += beatDuration;
+                playChord(V, current, beatDuration * 1.15);
+                current += beatDuration;
+                playChord(I, current, beatDuration * 1.45);
+                current += beatDuration * 1.35;
+            } else {
+                playChord(I, current, beatDuration * 1.05);
+                current += beatDuration;
+                playChord(IV, current, beatDuration * 1.05);
+                current += beatDuration;
+                playChord(V7, current, beatDuration * 1.05);
+                current += beatDuration;
+                playChord(I, current, beatDuration * 1.45);
+                current += beatDuration * 1.35;
+            }
+
+            return current;
+        }
+
+        // --- CONTROLES DE CONFIGURAÇÃO ---
+        function toggleOptionsPanel() {
+            const panel = document.getElementById('options-panel');
+            const icon = document.getElementById('options-toggle-icon');
+            if (panel) panel.classList.toggle('hidden');
+            if (icon) icon.classList.toggle('rotate-180');
+        }
+
+        function setTonality(tonalityKey) {
+            selectedTonalityKey = tonalityKey;
+            if (tonalityKey !== 'RANDOM') {
+                currentTonalityKey = tonalityKey;
+            }
+            updateActiveNotes();
+            updateTonalityDisplay();
+            if (referenceMode === 'drone' && isDroneActive) {
+                startOrUpdateDrone(currentTonalityKey);
+            }
+        }
+
+        function updateTonalityDisplay() {
+            const badge = document.getElementById('current-tonality-badge');
+            if (badge) badge.innerText = `Tom: ${currentTonalityKey}`;
+        }
+
+        function setNoteSelectionMode(mode) {
+            selectedMode = mode;
+            document.getElementById('mode-diatonic').className = mode === 'diatonic'
+                ? 'flex-1 py-1 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm'
+                : 'flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200';
+            document.getElementById('mode-chromatic').className = mode === 'chromatic'
+                ? 'flex-1 py-1 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm'
+                : 'flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200';
+            updateActiveNotes();
+        }
+
+        function setSequenceLength(len) {
+            sequenceLength = len;
+            [2, 3, 4, 5, 6].forEach(n => {
+                const btn = document.getElementById(`seq-len-${n}`);
+                if (btn) {
+                    btn.className = n === len
+                        ? 'flex-1 py-1 rounded-lg font-bold transition-all bg-brand-600 text-white shadow-sm'
+                        : 'flex-1 py-1 rounded-lg font-bold transition-all text-slate-400 hover:text-slate-200';
+                }
+            });
+            const badge = document.getElementById('seq-length-badge');
+            if (badge) badge.innerText = `${len} notas`;
+            renderSequenceSlots();
+        }
+
+        function setReferenceMode(mode) {
+            referenceMode = mode;
+            ['cadence', 'tonic', 'drone'].forEach(m => {
+                const btn = document.getElementById(`ref-mode-${m}`);
+                if (btn) {
+                    btn.className = m === mode
+                        ? 'py-1 px-1.5 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm'
+                        : 'py-1 px-1.5 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200';
+                }
+            });
+
+            const cadenceSubBox = document.getElementById('cadence-subtype-box');
+            const droneVolumeBox = document.getElementById('drone-volume-box');
+            const indicator = document.getElementById('ref-mode-indicator');
+
+            if (mode === 'cadence') {
+                if (cadenceSubBox) cadenceSubBox.classList.remove('opacity-40', 'pointer-events-none');
+                if (droneVolumeBox) droneVolumeBox.classList.add('opacity-40', 'pointer-events-none');
+                if (indicator) indicator.innerText = `Ref: Cadência (${cadenceType === 'FAST' ? 'I-V-I' : 'I-IV-V7-I'})`;
+                stopDrone();
+            } else if (mode === 'tonic') {
+                if (cadenceSubBox) cadenceSubBox.classList.add('opacity-40', 'pointer-events-none');
+                if (droneVolumeBox) droneVolumeBox.classList.add('opacity-40', 'pointer-events-none');
+                if (indicator) indicator.innerText = 'Ref: Nota Tônica Antes';
+                stopDrone();
+            } else if (mode === 'drone') {
+                if (cadenceSubBox) cadenceSubBox.classList.add('opacity-40', 'pointer-events-none');
+                if (droneVolumeBox) droneVolumeBox.classList.remove('opacity-40', 'pointer-events-none');
+                if (indicator) indicator.innerText = 'Ref: Nota Drone Contínua';
+                startOrUpdateDrone(currentTonalityKey);
+            }
+            updateDroneHeaderUI();
+        }
+
+        function setCadenceType(type) {
+            cadenceType = type;
+            document.getElementById('cadence-fast').className = type === 'FAST'
+                ? 'flex-1 py-1 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm'
+                : 'flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200';
+            document.getElementById('cadence-full').className = type === 'FULL'
+                ? 'flex-1 py-1 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm'
+                : 'flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200';
+            if (referenceMode === 'cadence') {
+                const indicator = document.getElementById('ref-mode-indicator');
+                if (indicator) indicator.innerText = `Ref: Cadência (${type === 'FAST' ? 'I-V-I' : 'I-IV-V7-I'})`;
+            }
+        }
+
+        function setOctaveRange(octaves) {
+            selectedOctaves = octaves;
+            ['1', '2'].forEach(oct => {
+                const btn = document.getElementById(`oct-${oct}`);
+                if (btn) {
+                    btn.className = oct === octaves
+                        ? 'flex-1 py-1 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm'
+                        : 'flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200';
+                }
+            });
+            updateActiveNotes();
+        }
+
+        function setPlaybackSpeed(speed) {
+            playbackSpeed = speed;
+            const speedMap = { 0.75: '075', 1.0: '10', 1.25: '125', 1.5: '15' };
+            Object.entries(speedMap).forEach(([val, idSuffix]) => {
+                const btn = document.getElementById(`speed-${idSuffix}`);
+                if (btn) {
+                    btn.className = parseFloat(val) === speed
+                        ? 'flex-1 py-1 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm'
+                        : 'flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200';
+                }
+            });
+        }
+
+        function setAutoPlay(enabled) {
+            autoPlayNext = enabled;
+            document.getElementById('auto-play-on').className = enabled
+                ? 'flex-1 py-1 rounded-lg font-medium transition-all bg-emerald-600 text-white shadow-sm'
+                : 'flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200';
+            document.getElementById('auto-play-off').className = !enabled
+                ? 'flex-1 py-1 rounded-lg font-medium transition-all bg-brand-600 text-white shadow-sm'
+                : 'flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200';
+        }
+
+        function updateActiveNotes() {
+            const tonalityData = TONALITIES[currentTonalityKey];
+            activeNotes = ALL_NOTES.filter(n => {
+                const inOctave = selectedOctaves === '1' ? n.octave === 4 : (n.octave === 4 || n.octave === 5);
+                const matchesScale = selectedMode === 'chromatic' || tonalityData.intervals.includes(n.pitchClass);
+                return inOctave && matchesScale;
+            });
+            renderKeyboard();
+        }
+
+        // --- RENDERIZAÇÃO DOS SLOTS DE PROGRESSO DA MELODIA ---
+        function renderSequenceSlots() {
+            const container = document.getElementById('sequence-slots-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const total = targetSequence.length > 0 ? targetSequence.length : sequenceLength;
+
+            for (let i = 0; i < total; i++) {
+                const slot = document.createElement('div');
+                const isGuessed = i < userGuessedSequence.length;
+                const isCurrent = userCanAnswer && i === currentStepIndex && targetSequence.length > 0;
+
+                if (isGuessed) {
+                    const noteObj = userGuessedSequence[i];
+                    const movableLabel = getMovableDoLabel(noteObj, currentTonalityKey).split(' ')[0];
+                    slot.className = 'min-w-[54px] sm:min-w-[64px] h-12 px-2 rounded-xl bg-emerald-500/20 border border-emerald-500/50 text-emerald-300 flex flex-col items-center justify-center transition-all';
+                    slot.innerHTML = `
+                        <span class="text-xs sm:text-sm font-extrabold leading-none">${noteObj.name}</span>
+                        <span class="text-[10px] opacity-80 mt-0.5 leading-none">${movableLabel}</span>
+                    `;
+                } else if (isCurrent) {
+                    slot.className = 'min-w-[54px] sm:min-w-[64px] h-12 px-2 rounded-xl bg-brand-500/20 border-2 border-brand-400 text-brand-300 flex flex-col items-center justify-center slot-active animate-pulse transition-all';
+                    slot.innerHTML = `
+                        <span class="text-xs font-extrabold leading-none">?</span>
+                        <span class="text-[9px] uppercase font-bold mt-0.5 leading-none">Nota ${i + 1}</span>
+                    `;
+                } else {
+                    slot.className = 'min-w-[54px] sm:min-w-[64px] h-12 px-2 rounded-xl bg-slate-900 border border-slate-800 text-slate-500 flex flex-col items-center justify-center transition-all';
+                    slot.innerHTML = `
+                        <span class="text-xs font-bold leading-none">${i + 1}</span>
+                        <span class="text-[9px] opacity-60 mt-0.5 leading-none">---</span>
+                    `;
+                }
+                container.appendChild(slot);
+            }
+        }
+
+        // --- FLUXO PRINCIPAL DO DITADO MELÓDICO ---
+        function startNewSequence() {
+            const ctx = getAudioContext();
+            playbackSessionId++;
+            const session = playbackSessionId;
+
+            if (selectedTonalityKey === 'RANDOM') {
+                const keys = Object.keys(TONALITIES);
+                currentTonalityKey = keys[Math.floor(Math.random() * keys.length)];
+                updateActiveNotes();
+            }
+            updateTonalityDisplay();
+
+            // Ativa ou atualiza o Drone se o modo Drone estiver escolhido
+            if (referenceMode === 'drone') {
+                startOrUpdateDrone(currentTonalityKey);
+            }
+
+            // Sorteia sequência melódica (evitando repetir a mesma nota 3 vezes seguidas)
+            targetSequence = [];
+            for (let i = 0; i < sequenceLength; i++) {
+                let candidate = activeNotes[Math.floor(Math.random() * activeNotes.length)];
+                if (i >= 2 && targetSequence[i - 1].name === candidate.name && targetSequence[i - 2].name === candidate.name) {
+                    candidate = activeNotes[(activeNotes.indexOf(candidate) + 1) % activeNotes.length];
+                }
+                targetSequence.push(candidate);
+            }
+
+            userGuessedSequence = [];
+            currentStepIndex = 0;
+            renderSequenceSlots();
+
+            playSequenceAudio(session);
+        }
+
+        function repeatCurrentSequence() {
+            if (targetSequence.length === 0 || isPlaying) return;
+            playbackSessionId++;
+            playSequenceAudio(playbackSessionId);
+        }
+
+        function playSequenceAudio(session) {
+            const ctx = getAudioContext();
+            isPlaying = true;
+            userCanAnswer = false;
+
+            const badge = document.getElementById('feedback-badge');
+            const statusText = document.getElementById('status-text');
+            const subStatus = document.getElementById('sub-status');
+
+            badge.innerText = 'Ouvindo...';
+            badge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-slate-800 text-slate-300 border border-slate-700 font-bold shrink-0';
+            statusText.innerText = `Ouvindo ditado (${targetSequence.length} notas)...`;
+            subStatus.innerText = `Tonalidade: ${TONALITIES[currentTonalityKey].name}`;
+
+            let cursorTime = ctx.currentTime + 0.1;
+
+            // 1. Executa a Referência Inicial escolhida
+            if (referenceMode === 'cadence') {
+                cursorTime = playCadenceForTonality(currentTonalityKey, cursorTime);
+            } else if (referenceMode === 'tonic') {
+                const tonicFreq = TONALITIES[currentTonalityKey].rootFreq;
+                const refDur = 0.7 / playbackSpeed;
+                playTone(tonicFreq, cursorTime, refDur, 0.9);
+                cursorTime += refDur + (0.35 / playbackSpeed);
+            } else if (referenceMode === 'drone') {
+                startOrUpdateDrone(currentTonalityKey);
+                cursorTime += 0.35 / playbackSpeed;
+            }
+
+            // 2. Toca as notas da sequência melódica em ordem
+            const noteStep = 0.52 / playbackSpeed;
+            const noteDur = noteStep * 0.92;
+
+            targetSequence.forEach((noteObj, idx) => {
+                const isLast = idx === targetSequence.length - 1;
+                playTone(noteObj.freq, cursorTime, isLast ? noteDur * 1.35 : noteDur, 0.9);
+                cursorTime += noteStep;
+            });
+
+            const totalWaitMs = Math.max(200, (cursorTime - ctx.currentTime) * 1000);
+
+            setTimeout(() => {
+                if (session !== playbackSessionId) return;
+                isPlaying = false;
+                userCanAnswer = true;
+                renderSequenceSlots();
+
+                badge.innerText = `Nota ${currentStepIndex + 1} de ${targetSequence.length}`;
+                badge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 pulse-glow font-bold shrink-0';
+                statusText.innerText = 'Sua vez! Reproduza a melodia';
+                subStatus.innerText = `Clique na ${currentStepIndex + 1}ª nota da sequência ouvida`;
+            }, totalWaitMs);
+        }
+
+        function clearCurrentProgress() {
+            if (targetSequence.length === 0 || isPlaying) return;
+            userGuessedSequence = [];
+            currentStepIndex = 0;
+            userCanAnswer = true;
+            renderSequenceSlots();
+
+            const badge = document.getElementById('feedback-badge');
+            badge.innerText = `Nota 1 de ${targetSequence.length}`;
+            badge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-brand-500/20 text-brand-300 border border-brand-500/30 pulse-glow font-bold shrink-0';
+            document.getElementById('status-text').innerText = 'Progresso limpo. Recomece a sequência!';
+        }
+
+        function handleNoteClick(selectedIndex) {
+            const selectedNote = activeNotes[selectedIndex];
+            if (!selectedNote) return;
+
+            // Toca sempre a nota clicada como retorno auditivo imediato
+            const ctx = getAudioContext();
+            playTone(selectedNote.freq, ctx.currentTime + 0.01, 0.55, 0.85);
+
+            if (!userCanAnswer || targetSequence.length === 0 || isPlaying) return;
+
+            const expectedNote = targetSequence[currentStepIndex];
+            const isMatch = selectedNote.name === expectedNote.name;
+
+            recordNoteAttempt(expectedNote, currentTonalityKey, isMatch);
+
+            const badge = document.getElementById('feedback-badge');
+            const statusText = document.getElementById('status-text');
+            const subStatus = document.getElementById('sub-status');
+
+            if (isMatch) {
+                userGuessedSequence.push(expectedNote);
+                currentStepIndex++;
+                renderSequenceSlots();
+
+                // Verifica se completou todas as notas da sequência
+                if (currentStepIndex >= targetSequence.length) {
+                    userCanAnswer = false;
+                    score += targetSequence.length * 10;
+                    streak += 1;
+                    document.getElementById('score-count').innerText = score;
+                    document.getElementById('streak-count').innerText = streak;
+
+                    const seqSummary = targetSequence.map(n => n.name).join(' → ');
+                    badge.innerText = 'Sequência Completa!';
+                    badge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-bold shrink-0';
+                    statusText.innerText = 'Excelente! Ditado concluído 🎉';
+                    subStatus.innerText = `Melodia: ${seqSummary}`;
+
+                    // Toca uma rápida confirmação melódica e avança automaticamente se ativado
+                    if (autoPlayNext) {
+                        const delayNext = Math.max(950, 1300 / playbackSpeed);
+                        const currentSess = playbackSessionId;
+                        setTimeout(() => {
+                            if (currentSess === playbackSessionId && autoPlayNext) {
+                                startNewSequence();
+                            }
+                        }, delayNext);
+                    }
+                } else {
+                    // Avança para a próxima nota dentro da mesma sequência
+                    badge.innerText = `Nota ${currentStepIndex + 1} de ${targetSequence.length}`;
+                    statusText.innerText = `Boa! Continue (${currentStepIndex}/${targetSequence.length})`;
+                    subStatus.innerText = `Agora selecione a ${currentStepIndex + 1}ª nota`;
+                }
+            } else {
+                // Erro na nota atual
+                streak = 0;
+                document.getElementById('streak-count').innerText = streak;
+
+                badge.innerText = 'Tente de Novo';
+                badge.className = 'text-xs px-2.5 py-0.5 rounded-full bg-rose-500/20 text-rose-400 border border-rose-500/30 font-bold shrink-0';
+                statusText.innerText = `Ops! Não é ${selectedNote.name} ❌`;
+                subStatus.innerText = `Tente novamente a ${currentStepIndex + 1}ª nota ou clique em "Repetir Sequência"`;
+
+                const btn = document.getElementById(`note-btn-${selectedIndex}`);
+                if (btn) {
+                    btn.classList.add('!bg-rose-900/90', '!border-rose-500', '!text-white');
+                    setTimeout(() => {
+                        btn.classList.remove('!bg-rose-900/90', '!border-rose-500', '!text-white');
+                    }, 650);
+                }
+            }
+        }
+
+        // --- RENDERIZAÇÃO DO TECLADO COM DÓ MÓVEL ---
+        function renderKeyboard() {
+            const container = document.getElementById('keyboard-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (activeNotes.length <= 8) {
+                container.className = `grid grid-cols-${activeNotes.length} gap-1.5 max-h-[260px] overflow-y-auto p-1 custom-scrollbar`;
+            } else {
+                container.className = 'grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-7 gap-1.5 max-h-[260px] overflow-y-auto p-1 custom-scrollbar';
+            }
+
+            activeNotes.forEach((note, index) => {
+                const button = document.createElement('button');
+                button.id = `note-btn-${index}`;
+                button.onclick = () => handleNoteClick(index);
+
+                const isBlack = note.type === 'black';
+                const baseClasses = 'note-btn flex flex-col items-center justify-center py-1.5 px-1 rounded-xl border transition-all text-center select-none shadow-md min-h-[46px] sm:min-h-[52px]';
+                const colorClasses = isBlack
+                    ? 'black-key border-slate-700 text-slate-200 hover:border-brand-500 hover:text-white'
+                    : 'white-key border-slate-300 text-slate-800 hover:border-brand-500 hover:bg-slate-50 font-bold';
+
+                const movableLabel = getMovableDoLabel(note, currentTonalityKey);
+
+                button.className = `${baseClasses} ${colorClasses}`;
+                button.innerHTML = `
+                    <span class="text-xs sm:text-sm font-extrabold tracking-tight leading-none">${note.name}</span>
+                    <span class="text-[9px] sm:text-[10px] opacity-75 mt-0.5 whitespace-nowrap overflow-hidden text-ellipsis max-w-full px-0.5 leading-none">${movableLabel}</span>
+                `;
+                container.appendChild(button);
+            });
+        }
+
+        // --- MODAL DE ESTATÍSTICAS ---
+        function toggleStatsModal() {
+            const modal = document.getElementById('stats-modal');
+            if (modal) {
+                modal.classList.toggle('hidden');
+                if (!modal.classList.contains('hidden')) {
+                    renderStats();
+                }
+            }
+        }
+
+        function switchStatsTab(tab) {
+            activeStatsTab = tab;
+            const degBtn = document.getElementById('stats-tab-degrees');
+            const tonBtn = document.getElementById('stats-tab-tonalities');
+            if (tab === 'degrees') {
+                degBtn.className = 'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all bg-brand-600 text-white';
+                tonBtn.className = 'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-800 text-slate-400 hover:text-slate-200';
+            } else {
+                tonBtn.className = 'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all bg-brand-600 text-white';
+                degBtn.className = 'flex-1 py-1.5 rounded-xl text-xs font-bold transition-all bg-slate-800 text-slate-400 hover:text-slate-200';
+            }
+            renderStats();
+        }
+
+        function renderStats() {
+            const container = document.getElementById('stats-container');
+            const totalText = document.getElementById('total-attempts-text');
+            if (!container) return;
+
+            container.innerHTML = '';
+            let totalAttemptsSum = 0;
+
+            const degreeNames = [
+                'Dó — Tônica (1ª)', 'Dó# / Reb (2ªm)', 'Ré — 2ª Maior', 'Ré# / Mib (3ªm)',
+                'Mi — 3ª Maior', 'Fá — 4ª Justa', 'Fá# / Solb (4ªA)', 'Sol — 5ª Justa',
+                'Sol# / Láb (6ªm)', 'Lá — 6ª Maior', 'Lá# / Sib (7ªm)', 'Si — 7ª Maior'
+            ];
+
+            if (activeStatsTab === 'degrees') {
+                degreeNames.forEach((name, semitone) => {
+                    const stat = statsData[`degree_${semitone}`] || { attempts: 0, correct: 0 };
+                    totalAttemptsSum += stat.attempts;
+                    const pct = stat.attempts > 0 ? Math.round((stat.correct / stat.attempts) * 100) : 0;
+                    const colorClass = stat.attempts === 0 ? 'bg-slate-700' : (pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-rose-500');
+
+                    const item = document.createElement('div');
+                    item.className = 'bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/60 space-y-1';
+                    item.innerHTML = `
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-slate-200">${name}</span>
+                            <span class="text-slate-400">${stat.correct}/${stat.attempts} (${pct}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div class="${colorClass} h-full transition-all duration-300" style="width: ${pct}%"></div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            } else {
+                Object.keys(TONALITIES).forEach(tKey => {
+                    const stat = statsData[`tonality_${tKey}`] || { attempts: 0, correct: 0 };
+                    totalAttemptsSum += stat.attempts;
+                    const pct = stat.attempts > 0 ? Math.round((stat.correct / stat.attempts) * 100) : 0;
+                    const colorClass = stat.attempts === 0 ? 'bg-slate-700' : (pct >= 80 ? 'bg-emerald-500' : pct >= 50 ? 'bg-amber-500' : 'bg-rose-500');
+
+                    const item = document.createElement('div');
+                    item.className = 'bg-slate-950/50 p-2.5 rounded-xl border border-slate-800/60 space-y-1';
+                    item.innerHTML = `
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="font-bold text-slate-200">${TONALITIES[tKey].name} (${tKey})</span>
+                            <span class="text-slate-400">${stat.correct}/${stat.attempts} (${pct}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                            <div class="${colorClass} h-full transition-all duration-300" style="width: ${pct}%"></div>
+                        </div>
+                    `;
+                    container.appendChild(item);
+                });
+            }
+
+            if (totalText) {
+                totalText.innerText = `Total de notas avaliadas: ${totalAttemptsSum}`;
+            }
+        }
+
+        function resetStats() {
+            statsData = {};
+            localStorage.removeItem('melodic_dictation_stats');
+            renderStats();
+        }
+
+        // Inicialização
+        window.onload = () => {
+            updateActiveNotes();
+            updateTonalityDisplay();
+            renderSequenceSlots();
+        };
+    </script>
+</body>
+</html>
