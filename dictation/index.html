@@ -168,7 +168,7 @@
                 </div>
 
                 <!-- Volume da Nota Drone -->
-                <div id="drone-volume-box" class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5 opacity-50 pointer-events-none transition-all">
+                <div id="drone-volume-box" onmousedown="if (!droneActive && referenceMode !== 'drone') { setReferenceMode('drone'); }" class="bg-slate-950/60 p-2.5 rounded-xl border border-slate-800/80 space-y-1.5 transition-all">
                     <div class="flex justify-between items-center">
                         <label for="drone-volume-slider" class="font-semibold text-slate-300">Volume da Nota Drone</label>
                         <span id="drone-volume-label" class="text-[11px] font-mono text-brand-300">25%</span>
@@ -571,11 +571,17 @@
 
         function updateDroneVolumeBoxState() {
             const box = document.getElementById('drone-volume-box');
+            const slider = document.getElementById('drone-volume-slider');
             if (!box) return;
-            if (referenceMode === 'drone') {
-                box.classList.remove('opacity-50', 'pointer-events-none');
+
+            const enabled = referenceMode === 'drone' || droneActive;
+            if (slider) slider.disabled = false;
+
+            box.classList.remove('pointer-events-none');
+            if (enabled) {
+                box.classList.remove('opacity-50');
             } else {
-                box.classList.add('opacity-50', 'pointer-events-none');
+                box.classList.add('opacity-50');
             }
         }
 
@@ -721,12 +727,12 @@
                         : 'flex-1 py-1 rounded-lg font-medium transition-all text-slate-400 hover:text-slate-200';
                 }
             });
-            updateDroneVolumeBoxState();
             if (mode === 'drone') {
                 startDroneForTonality(currentTonalityKey);
             } else {
                 stopDrone();
             }
+            updateDroneVolumeBoxState();
         }
 
         function setNoteSelectionMode(mode) {
